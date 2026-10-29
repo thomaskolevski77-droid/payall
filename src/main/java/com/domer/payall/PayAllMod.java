@@ -68,7 +68,7 @@ public class PayAllMod implements ClientModInitializer {
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> onMessage(message.getString()));
 
-        ClientReceiveMessageEvents.CHAT.register((message, signed, sender, params, time, overlay) -> {
+        ClientReceiveMessageEvents.CHAT.register((message, signed, sender, params, time) -> {
             String s = message.getString().toLowerCase(Locale.ROOT);
             if (s.contains("balance") || s.contains("bal:")) onMessage(s);
         });
