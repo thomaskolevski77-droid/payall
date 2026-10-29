@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "payall",
+  "version": "${version}",
+  "name": "PayAll",
+  "description": "Sends /pay <target> with your entire balance after you join.",
+  "authors": ["Domer234"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.domer.payall.PayAllMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21"
+  }
+}
