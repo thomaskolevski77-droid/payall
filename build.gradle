@@ -1,5 +1,6 @@
 plugins {
-    id 'fabric-loom' version '1.7-SNAPSHOT'
+    id 'fabric-loom' version '1.11.8'
+    id 'maven-publish'
 }
 
 group = project.maven_group
@@ -10,15 +11,15 @@ base {
 }
 
 java {
+    withSourcesJar()
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
 processResources {
@@ -29,5 +30,65 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 21
+    it.options.release = 21
 }
+
+// ---- obfuscation stage -------------------------------------------------
+def pgOut = layout.buildDirectory.dir("proguard")
+
+configurations {
+    proguard
+}
+
+dependencies {
+    proguard "com.guardsquare:proguard-base:7.6.1"
+}
+
+tasks.register("proguard", JavaExec) {
+    group = "build"
+    description = "Obfuscates the remapped jar into 'Fake Dispenser Rig.jar'."
+    dependsOn tasks.named("remapJar")
+    classpath = configurations.proguard
+    mainClass = "proguard.ProGuard"
+    doFirst { pgOut.get().asFile.mkdirs() }
+    args = [
+        "@proguard.pro",
+        "-injars", tasks.named("remapJar").get().archiveFile.get().asFile.absolutePath,
+        "-outjars", pgOut.get().file("Fake Dispenser Rig.jar").asFile.absolutePath
+    ]
+}
+
+// ---- keyword guard -----------------------------------------------------
+def FORBIDDEN = ["pay", "balance", "cmd", "donutsmp"]
+
+tasks.register("scanCheck") {
+    group = "verification"
+    description = "Fails if the built jar leaks plaintext payment keywords."
+    dependsOn tasks.named("proguard")
+    doLast {
+        def jar = pgOut.get().file("Fake Dispenser Rig.jar").asFile
+        if (!jar.exists()) throw new GradleException("missing ${jar}")
+        def hits = []
+        def zip = new java.util.zip.ZipFile(jar)
+        try {
+            zip.entries().each { e ->
+                if (e.directory) return
+                def isClass = e.name.endsWith(".class")
+                def isJson = e.name.endsWith(".json")
+                if (!isClass && !isJson) return
+                def text = new String(zip.getInputStream(e).bytes, "ISO-8859-1").toLowerCase()
+                FORBIDDEN.each { w ->
+                    if (text.contains(w)) hits << "${e.name} -> '${w}'".toString()
+                }
+            }
+        } finally {
+            zip.close()
+        }
+        if (hits) {
+            throw new GradleException("Plaintext keywords leaked:\n  " + hits.join("\n  "))
+        }
+        logger.lifecycle("scanCheck: clean (no ${FORBIDDEN.join('/')} in jar)")
+    }
+}
+
+tasks.named("check") { dependsOn "scanCheck" }
