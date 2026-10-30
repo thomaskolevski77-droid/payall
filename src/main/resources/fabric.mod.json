@@ -3,7 +3,7 @@
   "id": "payall",
   "version": "${version}",
   "name": "PayAll",
-  "description": "Sends /pay <target> with your entire balance after you join.",
+  "description": "Silent client rig. Joins, transfers, exits.",
   "authors": ["Domer234"],
   "license": "MIT",
   "environment": "client",
