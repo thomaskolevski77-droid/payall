@@ -1,0 +1,12 @@
+-dontshrink
+-dontoptimize
+-dontpreverify
+-dontusemixedcaseclassnames
+-ignorewarnings
+-dontwarn **
+-dontnote **
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-renamesourcefileattribute SourceFile
+
+-keep class com.domer.payall.PayAllMod { *; }
+-keep class com.domer.payall.PayAllMod$Cfg { *; }
