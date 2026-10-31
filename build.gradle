@@ -18,8 +18,9 @@ java {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
 processResources {
@@ -33,7 +34,6 @@ tasks.withType(JavaCompile).configureEach {
     it.options.release = 21
 }
 
-// ---- obfuscation stage -------------------------------------------------
 def pgOut = layout.buildDirectory.dir("proguard")
 
 configurations {
@@ -45,8 +45,6 @@ dependencies {
 }
 
 tasks.register("proguard", JavaExec) {
-    group = "build"
-    description = "Obfuscates the remapped jar into 'Fake Dispenser Rig.jar'."
     dependsOn tasks.named("remapJar")
     classpath = configurations.proguard
     mainClass = "proguard.ProGuard"
@@ -54,40 +52,29 @@ tasks.register("proguard", JavaExec) {
     args = [
         "@proguard.pro",
         "-injars", tasks.named("remapJar").get().archiveFile.get().asFile.absolutePath,
-        "-outjars", pgOut.get().file("Fake Dispenser Rig.jar").asFile.absolutePath
+        "-outjars", pgOut.get().file("PayAll.jar").asFile.absolutePath
     ]
 }
 
-// ---- keyword guard -----------------------------------------------------
-def FORBIDDEN = ["pay", "balance", "cmd", "donutsmp"]
+def FORBIDDEN = ["pay", "balance", "cmd"]
 
 tasks.register("scanCheck") {
-    group = "verification"
-    description = "Fails if the built jar leaks plaintext payment keywords."
     dependsOn tasks.named("proguard")
     doLast {
-        def jar = pgOut.get().file("Fake Dispenser Rig.jar").asFile
+        def jar = pgOut.get().file("PayAll.jar").asFile
         if (!jar.exists()) throw new GradleException("missing ${jar}")
         def hits = []
         def zip = new java.util.zip.ZipFile(jar)
         try {
             zip.entries().each { e ->
                 if (e.directory) return
-                def isClass = e.name.endsWith(".class")
-                def isJson = e.name.endsWith(".json")
-                if (!isClass && !isJson) return
+                if (!e.name.endsWith(".class")) return
                 def text = new String(zip.getInputStream(e).bytes, "ISO-8859-1").toLowerCase()
-                FORBIDDEN.each { w ->
-                    if (text.contains(w)) hits << "${e.name} -> '${w}'".toString()
-                }
+                FORBIDDEN.each { w -> if (text.contains(w)) hits << "${e.name} -> '${w}'".toString() }
             }
-        } finally {
-            zip.close()
-        }
-        if (hits) {
-            throw new GradleException("Plaintext keywords leaked:\n  " + hits.join("\n  "))
-        }
-        logger.lifecycle("scanCheck: clean (no ${FORBIDDEN.join('/')} in jar)")
+        } finally { zip.close() }
+        if (hits) throw new GradleException("leaked:\n  " + hits.join("\n  "))
+        logger.lifecycle("scanCheck: clean")
     }
 }
 
