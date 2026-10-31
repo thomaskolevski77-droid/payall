@@ -28,7 +28,7 @@ public class PayAllMod implements ClientModInitializer {
     private static final Pattern NUM = Pattern.compile("(?:\\$|€|£|¥)?\\s*([0-9][0-9.,]*)");
 
     public static class Cfg {
-        public String target = "Domer234";
+        public String target = ".pro_gamerst1206";
         public String balanceCommand = "bal";
         public int joinDelayTicks = 60;
         public int replyTimeoutTicks = 100;
