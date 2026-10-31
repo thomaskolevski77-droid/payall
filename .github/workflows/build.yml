@@ -15,10 +15,10 @@ jobs:
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.10'
+          gradle-version: '8.14'
       - run: gradle build
       - uses: actions/upload-artifact@v4
         with:
           name: payall-jar
-          path: build/libs/*.jar
+          path: build/proguard/*.jar
           if-no-files-found: error
